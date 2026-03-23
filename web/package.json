@@ -1,0 +1,37 @@
+{
+  "name": "mesh2cad-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "bun@1.3.11",
+  "scripts": {
+    "sync:python": "node ./scripts/sync-python.mjs",
+    "dev": "bun run sync:python && vite",
+    "build": "bun run sync:python && vite build",
+    "preview": "bun run sync:python && vite preview",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:pages-build": "bun run sync:python && VITE_BASE_PATH=/example-repo/ VITE_ENABLE_PWA=true vite build",
+    "validate": "bun run check && bun run test && bun run build && bun run test:pages-build",
+    "deploy:check": "bun run validate"
+  },
+  "dependencies": {
+    "preact": "^10.29.0",
+    "three": "^0.181.1"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.4",
+    "@tailwindcss/vite": "^4.2.1",
+    "@testing-library/preact": "^3.2.4",
+    "@types/node": "^25.5.0",
+    "@types/three": "^0.181.0",
+    "jsdom": "^28.1.0",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^4.1.0",
+    "workbox-window": "^7.4.0"
+  }
+}

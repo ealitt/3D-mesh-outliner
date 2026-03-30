@@ -1,106 +1,211 @@
 /// <reference lib="webworker" />
 
-import type { WorkerErrorResponse, WorkerProcessRequest, WorkerResultResponse, WorkerStatusResponse } from "../lib/types";
+import type {
+  WorkerErrorResponse,
+  WorkerOffsetRequest,
+  WorkerProcessRequest,
+  WorkerRegisterRequest,
+  WorkerReadyResponse,
+  WorkerRequest,
+  WorkerResultResponse,
+  WorkerStatusResponse,
+  WorkerUnionRequest,
+} from "../lib/types";
 
 declare const self: DedicatedWorkerGlobalScope;
 
-const PYODIDE_VERSION = "0.28.3";
-const PYODIDE_INDEX_URL = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
-
-let runtime: any | null = null;
-let runtimeReady: Promise<void> | null = null;
-
-self.onmessage = (event: MessageEvent<WorkerProcessRequest>) => {
-  void handleProcess(event.data);
+type WasmModule = {
+  default: (input?: RequestInfo | URL | Response | BufferSource | WebAssembly.Module) => Promise<unknown>;
+  offset_rings: (
+    rings: unknown,
+    options: unknown,
+  ) => unknown;
+  union_rings: (
+    rings: unknown,
+    units: unknown,
+  ) => unknown;
+  process_mesh: (
+    positions: Float64Array,
+    indices: Uint32Array,
+    options: unknown,
+  ) => unknown;
 };
+
+type CachedMesh = {
+  indices: Uint32Array;
+  positions: Float64Array;
+};
+
+let runtime: WasmModule | null = null;
+let runtimeReady: Promise<void> | null = null;
+const meshCache = new Map<string, CachedMesh>();
+
+self.onmessage = (event: MessageEvent<WorkerRequest>) => {
+  switch (event.data.type) {
+    case "warmup":
+      void handleWarmup(event.data.id);
+      return;
+    case "register":
+      void handleRegister(event.data);
+      return;
+    case "process":
+      void handleProcess(event.data);
+      return;
+    case "offset":
+      void handleOffset(event.data);
+      return;
+    case "union":
+      void handleUnion(event.data);
+      return;
+  }
+};
+
+async function handleWarmup(id: number) {
+  try {
+    await ensureRuntime(id);
+    self.postMessage({ id, type: "ready" } satisfies WorkerReadyResponse);
+  } catch (error) {
+    self.postMessage({
+      id,
+      message: error instanceof Error ? error.message : "Wasm backend warmup failed.",
+      type: "error",
+    } satisfies WorkerErrorResponse);
+  }
+}
+
+async function handleRegister(message: WorkerRegisterRequest) {
+  try {
+    await ensureRuntime(message.id);
+    postStatus(message.id, "Caching triangle buffers in the Wasm worker...");
+    meshCache.set(message.meshId, {
+      indices: new Uint32Array(message.indicesBuffer),
+      positions: new Float64Array(message.positionsBuffer),
+    });
+    self.postMessage({ id: message.id, type: "ready" } satisfies WorkerReadyResponse);
+  } catch (error) {
+    self.postMessage({
+      id: message.id,
+      message: error instanceof Error ? error.message : "Wasm mesh registration failed.",
+      type: "error",
+    } satisfies WorkerErrorResponse);
+  }
+}
 
 async function handleProcess(message: WorkerProcessRequest) {
   try {
-    await ensureRuntime(message.basePath, message.id);
-    postStatus(message.id, "Running projection pipeline in Pyodide...");
-
-    const filePath = `/tmp/${sanitizeFileName(message.fileName)}`;
-    runtime.FS.mkdirTree("/tmp");
-    runtime.FS.writeFile(filePath, new Uint8Array(message.fileBuffer));
-    runtime.globals.set(
-      "payload_json",
-      JSON.stringify({
-        filePath,
-        fileType: message.fileType,
-        settings: message.settings,
-      }),
-    );
-
-    const json = await runtime.runPythonAsync(`
-import base64
-import json
-
-from mesh2cad import ExportSpec, ProcessSpec, ProjectionSpec, run_pipeline
-
-payload = json.loads(payload_json)
-settings = payload["settings"]
-
-result = run_pipeline(
-    payload["filePath"],
-    file_type=payload["fileType"],
-    projection=ProjectionSpec(
-        direction=tuple(settings["direction"]),
-        precise=settings["precise"],
-        ignore_sign=settings["ignoreSign"],
-    ),
-    process=ProcessSpec(
-        source_units=settings["sourceUnits"],
-        output_units=settings["outputUnits"],
-        scale=settings["scale"],
-        offset_distance=settings["offsetDistance"],
-        offset_stage=settings["offsetStage"],
-        keep_mode=settings["keepMode"],
-        min_area=settings["minArea"],
-        simplify_tolerance=settings["simplifyTolerance"],
-        join_style=settings["joinStyle"],
-    ),
-    export=ExportSpec(
-        write_svg=True,
-        write_dxf=True,
-        svg_stroke_width=settings["svgStrokeWidth"],
-        include_hatch=settings["includeHatch"],
-    ),
-)
-
-json.dumps(
-    {
-        "svgText": result.svg_text,
-        "dxfBase64": (
-            base64.b64encode(result.dxf_bytes).decode("ascii")
-            if result.dxf_bytes is not None
-            else None
-        ),
-        "area": result.area,
-        "bounds": list(result.bounds),
-        "bodyCount": result.body_count,
-        "warnings": result.warnings,
-        "units": result.units,
+    await ensureRuntime(message.id);
+    const mesh = meshCache.get(message.meshId);
+    if (!mesh) {
+      throw new Error("Cached Wasm mesh was not found. Re-upload the file and try again.");
     }
-)
-`);
 
+    postStatus(message.id, "Running the Rust/Wasm silhouette pipeline...");
+    const started = performance.now();
+    const result = runtime!.process_mesh(mesh.positions, mesh.indices, {
+      direction: message.settings.direction,
+      joinStyle: message.settings.joinStyle,
+      keepMode: message.settings.keepMode,
+      minArea: message.settings.minArea,
+      offsetDistance: 0,
+      offsetStage: message.settings.offsetStage,
+      outputUnits: message.settings.outputUnits,
+      planeBasisU: message.planeState?.basisUWorld ?? null,
+      planeBasisV: message.planeState?.basisVWorld ?? null,
+      planeNormal: message.planeState?.normalWorld ?? null,
+      planeOrigin: message.planeState?.originWorld ?? message.settings.planeOrigin ?? null,
+      planeRotationDegrees: message.settings.planeRotationDegrees,
+      planeTranslation: message.settings.planeTranslation,
+      projectionMode: message.settings.projectionMode,
+      rotationDegrees: message.settings.rotationDegrees,
+      rotationOrigin: message.settings.rotationOrigin,
+      scale: message.settings.scale,
+      simplifyTolerance: message.settings.simplifyTolerance,
+      snapGrid: message.settings.snapGrid,
+      sourceUnits: message.settings.sourceUnits,
+      translation: message.settings.translation,
+      unionBatchSize: message.settings.unionBatchSize,
+    }) as WorkerResultResponse["result"];
+
+    const pipelineMs = performance.now() - started;
     const response: WorkerResultResponse = {
       id: message.id,
-      result: JSON.parse(json),
+      result: {
+        ...result,
+        timings: {
+          pipelineMs: Number(pipelineMs.toFixed(3)),
+        },
+      },
       type: "result",
     };
     self.postMessage(response);
   } catch (error) {
-    const response: WorkerErrorResponse = {
+    self.postMessage({
       id: message.id,
-      message: error instanceof Error ? error.message : "Pyodide processing failed.",
+      message: error instanceof Error ? error.message : "Wasm processing failed.",
       type: "error",
-    };
-    self.postMessage(response);
+    } satisfies WorkerErrorResponse);
   }
 }
 
-async function ensureRuntime(basePath: string, requestId: number) {
+async function handleOffset(message: WorkerOffsetRequest) {
+  try {
+    await ensureRuntime(message.id);
+    postStatus(message.id, "Offsetting the projected outline...");
+    const started = performance.now();
+    const result = runtime!.offset_rings(message.rings, {
+      joinStyle: message.joinStyle,
+      offsetDistance: message.offsetDistance,
+      units: message.units,
+    }) as WorkerResultResponse["result"];
+
+    const pipelineMs = performance.now() - started;
+    self.postMessage({
+      id: message.id,
+      result: {
+        ...result,
+        timings: {
+          pipelineMs: Number(pipelineMs.toFixed(3)),
+        },
+      },
+      type: "result",
+    } satisfies WorkerResultResponse);
+  } catch (error) {
+    self.postMessage({
+      id: message.id,
+      message: error instanceof Error ? error.message : "Wasm offsetting failed.",
+      type: "error",
+    } satisfies WorkerErrorResponse);
+  }
+}
+
+async function handleUnion(message: WorkerUnionRequest) {
+  try {
+    await ensureRuntime(message.id);
+    postStatus(message.id, "Joining visible outlines...");
+    const started = performance.now();
+    const result = runtime!.union_rings(message.rings, message.units) as WorkerResultResponse["result"];
+    const pipelineMs = performance.now() - started;
+
+    self.postMessage({
+      id: message.id,
+      result: {
+        ...result,
+        timings: {
+          pipelineMs: Number(pipelineMs.toFixed(3)),
+        },
+      },
+      type: "result",
+    } satisfies WorkerResultResponse);
+  } catch (error) {
+    self.postMessage({
+      id: message.id,
+      message: error instanceof Error ? error.message : "Wasm outline union failed.",
+      type: "error",
+    } satisfies WorkerErrorResponse);
+  }
+}
+
+async function ensureRuntime(requestId: number) {
   if (runtime && runtimeReady) {
     await runtimeReady;
     return;
@@ -108,37 +213,10 @@ async function ensureRuntime(basePath: string, requestId: number) {
 
   if (!runtimeReady) {
     runtimeReady = (async () => {
-      postStatus(requestId, "Booting Pyodide runtime...");
-      const pyodideModule = await import(/* @vite-ignore */ `${PYODIDE_INDEX_URL}pyodide.mjs`);
-      runtime = await pyodideModule.loadPyodide({
-        indexURL: PYODIDE_INDEX_URL,
-      });
-
-      postStatus(requestId, "Loading geometry dependencies...");
-      await runtime.loadPackage(["micropip", "numpy", "shapely", "lxml", "networkx"]);
-      await runtime.runPythonAsync(`
-import micropip
-await micropip.install(["trimesh==4.11.4", "ezdxf==1.4.3"])
-`);
-
-      postStatus(requestId, "Syncing mesh2cad Python modules...");
-      const manifest = await fetchJson<{ files: string[] }>(
-        new URL(`${basePath}python/manifest.json`, self.location.origin).toString(),
-      );
-
-      runtime.FS.mkdirTree("/workspace/mesh2cad");
-      for (const fileName of manifest.files) {
-        const code = await fetchText(
-          new URL(`${basePath}python/mesh2cad/${fileName}`, self.location.origin).toString(),
-        );
-        runtime.FS.writeFile(`/workspace/mesh2cad/${fileName}`, code);
-      }
-
-      runtime.runPython(`
-import sys
-if "/workspace" not in sys.path:
-    sys.path.insert(0, "/workspace")
-`);
+      postStatus(requestId, "Loading the Rust/Wasm backend...");
+      const module = (await import("../wasm/pkg/mesh2cad_wasm.js")) as WasmModule;
+      await module.default();
+      runtime = module;
     })();
   }
 
@@ -146,28 +224,9 @@ if "/workspace" not in sys.path:
 }
 
 function postStatus(id: number, message: string) {
-  const response: WorkerStatusResponse = { id, message, type: "status" };
-  self.postMessage(response);
+  self.postMessage({
+    id,
+    message,
+    type: "status",
+  } satisfies WorkerStatusResponse);
 }
-
-async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to load ${url}`);
-  }
-  return (await response.json()) as T;
-}
-
-async function fetchText(url: string): Promise<string> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to load ${url}`);
-  }
-  return await response.text();
-}
-
-function sanitizeFileName(fileName: string): string {
-  return fileName.replace(/[^a-zA-Z0-9_.-]/g, "_");
-}
-
-export {};

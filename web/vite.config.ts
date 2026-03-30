@@ -1,15 +1,112 @@
 /// <reference types="vitest" />
+import { spawn } from "node:child_process";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
+import type { Plugin } from "vite";
 import preact from "@preact/preset-vite";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const base = process.env.VITE_BASE_PATH || "/";
 const enablePwa = process.env.VITE_ENABLE_PWA === "true";
+const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(here, "..");
+const wasmSourceDir = resolve(repoRoot, "mesh2cad-wasm");
+
+async function buildWasmDev() {
+  await new Promise<void>((resolvePromise, reject) => {
+    const child = spawn(
+      "wasm-pack",
+      [
+        "build",
+        wasmSourceDir,
+        "--target",
+        "web",
+        "--out-dir",
+        resolve(here, "src", "wasm", "pkg"),
+        "--out-name",
+        "mesh2cad_wasm",
+        "--dev",
+      ],
+      {
+        cwd: here,
+        stdio: "inherit",
+      },
+    );
+    child.on("exit", (code) => {
+      if (code === 0) {
+        resolvePromise();
+        return;
+      }
+      reject(new Error(`wasm-pack exited with code ${code ?? 1}`));
+    });
+    child.on("error", reject);
+  });
+}
+
+function mesh2cadWasmWatchPlugin(): Plugin {
+  let buildInFlight: Promise<void> | null = null;
+
+  const runBuild = async () => {
+    buildInFlight ??= buildWasmDev().finally(() => {
+      buildInFlight = null;
+    });
+    await buildInFlight;
+  };
+
+  return {
+    name: "mesh2cad-wasm-watch",
+    configureServer(server) {
+      const isWasmSource = (file: string) =>
+        file.startsWith(wasmSourceDir)
+        && (file.endsWith(".rs") || file.endsWith("Cargo.toml") || file.endsWith("Cargo.lock"));
+
+      const handleWasmChange = async (file: string) => {
+        if (!isWasmSource(file)) {
+          return;
+        }
+        await runBuild();
+        server.ws.send({ type: "full-reload" });
+      };
+
+      server.watcher.add(wasmSourceDir);
+      server.watcher.on("add", (file) => void handleWasmChange(file));
+      server.watcher.on("change", (file) => void handleWasmChange(file));
+      server.watcher.on("unlink", (file) => void handleWasmChange(file));
+    },
+  };
+}
 
 export default defineConfig({
   base,
+  resolve: {
+    alias: [
+      {
+        find: "@mesh2cad/mesh-workspace-viewer/styles.css",
+        replacement: resolve(
+          here,
+          "packages",
+          "mesh-workspace-viewer",
+          "src",
+          "styles",
+          "base.css",
+        ),
+      },
+      {
+        find: "@mesh2cad/mesh-workspace-viewer",
+        replacement: resolve(
+          here,
+          "packages",
+          "mesh-workspace-viewer",
+          "src",
+          "index.ts",
+        ),
+      },
+    ],
+  },
   plugins: [
+    mesh2cadWasmWatchPlugin(),
     preact(),
     tailwindcss(),
     VitePWA({

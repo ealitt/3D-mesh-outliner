@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 from shapely import BufferJoinStyle
+from shapely.errors import GEOSException
 from shapely.affinity import scale as affine_scale
-from shapely.ops import unary_union
 
-from .cleanup import repair_polygonal_geometry, sort_polygons
+from .cleanup import (
+    merge_polygonal_geometries,
+    repair_polygonal_geometry,
+    sort_polygons,
+    stabilize_polygonal_geometry,
+)
 from .types import JoinStyle
 
 _JOIN_STYLE_MAP = {
@@ -12,6 +17,7 @@ _JOIN_STYLE_MAP = {
     "mitre": BufferJoinStyle.mitre,
     "bevel": BufferJoinStyle.bevel,
 }
+_PRECISION_FACTORS = (0.0, 1e-9, 1e-8, 1e-7, 1e-6)
 
 
 def apply_scale(polygons, scale: float):
@@ -36,5 +42,19 @@ def apply_offset(polygons, distance: float, join_style: JoinStyle):
     if distance == 0.0:
         return sort_polygons(list(polygons))
 
-    buffered = unary_union(polygons).buffer(distance, join_style=_JOIN_STYLE_MAP[join_style])
-    return sort_polygons(repair_polygonal_geometry(buffered))
+    merged = merge_polygonal_geometries(list(polygons))
+    if getattr(merged, "is_empty", False):
+        return []
+
+    for precision_factor in _PRECISION_FACTORS:
+        try:
+            candidate = stabilize_polygonal_geometry(merged, precision_factor)
+            buffered = candidate.buffer(
+                distance,
+                join_style=_JOIN_STYLE_MAP[join_style],
+            )
+            return sort_polygons(repair_polygonal_geometry(buffered))
+        except GEOSException:
+            continue
+
+    return []

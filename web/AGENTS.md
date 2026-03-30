@@ -1,365 +1,528 @@
 # AGENTS.md
 
-This repository is a **template for tiny static web apps** deployed to **GitHub Pages**.
+This frontend is both a production app and a reference implementation for the user's preferred web-tool aesthetic.
 
-Read this file before making changes.
+Use this file to preserve:
+
+- product feel
+- visual language
+- layout conventions
+- interaction quality
+- implementation preferences
+- validation expectations
+
+Do not treat it as a command to clone every screen exactly. Treat it as a house style guide for future coding agents. Preserve these patterns unless the user explicitly asks for a different direction.
 
 ## Read these files first
 
 In addition to this file, load:
 
-- `CODEX_CONTEXT.md` for the high-level product and architecture explanation
-- `TESTING.md` for the exact validation commands that must pass before you finish
-- `.github/copilot-instructions.md` when working through GitHub Copilot surfaces
-
+- `CODEX_CONTEXT.md` for product and architecture context
+- `TESTING.md` for the required validation commands
+- `README.md` for the current feature set and runtime expectations
 
 ## Mission
 
-Build **small, polished, client-side apps** that do one thing well.
+Build small, polished, local-first browser tools that feel like serious desktop workspaces.
 
-Typical project shapes:
+The target vibe is:
 
-- utility tool
-- reference viewer
-- image/file transformer
-- generative art sketch
-- lightweight three.js scene
-- browser-hardware experiment
-- installable PWA
+- tool-like rather than marketing-like
+- calm, practical, and confident
+- visually warm but technically sharp
+- compact enough for repeat use
+- spatial and grounded when graphics are involved
+- modern without feeling trendy or decorative
 
-The result should feel **intentional, fast, modern, and clean**, not like a bloated SPA.
+The user likes web apps that feel closer to slicer, CAD, mapping, or studio software than to a startup landing page.
 
----
+## House style summary
 
-## Stack contract
+When starting a new app for this user, default to this visual and interaction formula:
 
-Use these defaults unless the task clearly requires something else:
+- a warm light shell around a darker focused work surface
+- one dominant main stage and one clearly secondary control rail
+- restrained accent color with strong hierarchy and minimal noise
+- compact panels, chips, segmented controls, and anchored popovers
+- selection that feels explicit and stable
+- settings that persist and do not reset unrelated state
+- dense enough to be useful, but never cramped or chaotic
 
-- **Package manager/runtime:** Bun
-- **Bundler/dev server:** Vite
-- **UI framework:** Preact
-- **State:** local state first, `@preact/signals` for simple shared or reactive state
-- **Styling:** Tailwind CSS v4 utilities plus small local CSS where needed
-- **Testing:** Vitest + Testing Library
-- **Hosting target:** GitHub Pages
-- **PWA:** opt-in via `VITE_ENABLE_PWA=true`
+## Core product feel
 
-Do **not** switch frameworks unless the user explicitly asks.
+### What the user wants
 
----
+- serious browser-based tools
+- direct workflows
+- visible state
+- predictable controls
+- little wasted space
+- interfaces that reward repeated use
 
-## Why Preact is the default here
+### What to avoid
 
-Choose Preact patterns first because this template is optimized for:
+- marketing sections and splashy hero layouts
+- oversized cards with too much air
+- loud gradients competing with the work
+- toy-like iconography or color use
+- overly rounded, pillowy UI everywhere
+- hidden state changes or magical auto-resets
 
-- lightweight bundles
-- React-shaped JSX and hooks
-- compatibility with more third-party examples and libraries
-- easier reuse by coding agents that already know React-like patterns
+## Layout rules
 
-Use `preact/compat` only when a dependency needs React compatibility. Do not add React itself.
+### Default workspace composition
 
----
+Prefer a split workspace:
 
-## Non-negotiable repo assumptions
+- primary work area on the left
+- controls and metadata on the right
+- the work surface should dominate
+- the control rail should stay visible but secondary
 
-1. **Static hosting only**
-   - No custom server
-   - No server-side rendering
-   - No backend secrets
-   - No dependence on Node APIs in shipped client code
+In this app, that means:
 
-2. **GitHub Pages path safety**
-   - Production deploys under a repo subpath such as `/my-project/`
-   - Always respect `import.meta.env.BASE_URL`
-   - Do not hardcode root-relative asset URLs unless they intentionally live in `public/` and still work with the configured base path
+- desktop workspace grid of `minmax(0, 1.24fr) 330px`
+- a large left preview article for the viewer and export tray
+- a right rail of stacked collapsible tool panels
 
-3. **Fast startup**
-   - Keep the initial route light
-   - Lazy-load heavy libraries like `three`, `p5`, code editors, parsers, or large image tools
-   - Push expensive work into workers when practical
+Carry this ratio into new projects unless the task clearly needs a different layout.
 
-4. **Browser-first UX**
-   - Use native browser capabilities well
-   - Favor drag-and-drop, file input, paste, pointer, keyboard shortcuts, and shareable URLs
-   - Prefer local processing over network roundtrips
+### Header pattern
 
----
+Use a compact top bar:
 
-## How to choose the app shape
+- left-aligned product title
+- one utility action cluster on the right
+- settings accessible from a cog in the top-right
 
-For each request, classify the app into one of these modes.
+Avoid giant mastheads or marketing copy above the workspace.
 
-### A. Utility mode
-Examples:
-- pi digits viewer
-- measurement converter
-- color tool
-- markdown previewer
-- image to SVG converter
-- JSON inspector
+### Mobile behavior
 
-Preferred architecture:
-- one screen or a very small number of views
-- form inputs + result area
-- state in component state or signals
-- worker for heavy parsing/conversion
-- optional URL param persistence for shareable state
+On smaller screens:
 
-### B. Canvas mode
-Examples:
-- p5.js art
-- three.js scene
-- shader toy-like experiments
-- interactive visualizers
+- stack the right rail below the main stage
+- keep the visual language intact instead of redesigning into a different app
+- preserve dense cards, segmented controls, and panel headers
+- let anchored popovers widen toward full available width when needed
 
-Preferred architecture:
-- a minimal app shell
-- dedicated canvas mount component
-- feature module loaded dynamically
-- controls separated from rendering logic
-- careful cleanup on unmount
+## Visual language
 
-### C. Hardware mode
-Examples:
-- Web Serial microcontroller console
-- WebUSB tool
-- WebHID dashboard
-- Bluetooth experiment
+### Overall direction
 
-Preferred architecture:
-- explicit connect/disconnect controls
-- capability detection before showing advanced actions
-- unsupported-browser message
-- optional demo/simulated mode
-- no assumption that every browser supports the API
+This app establishes the preferred look:
 
----
+- warm off-white outer workspace
+- dark technical viewport
+- olive-gray accent for primary actions and selected tabs
+- blue reserved mostly for focus rings and selection halos
+- subtle borders, low-noise shadows, soft overlays
 
-## Design rules
+Do not default to full dark mode for the whole app. The preferred pattern is a light workbench with dark focal surfaces where it helps the work.
 
-The visual bar should be higher than default boilerplate.
+### Core tokens
 
-### Use this style direction
-- soft glass or layered surfaces are okay, but keep them restrained
-- strong spacing and hierarchy
-- rounded corners
-- clear hover/focus states
-- excellent typography contrast
-- dark mode by default is acceptable for tools and art apps
+Use these tokens or very close descendants unless the user asks to change the palette:
 
-### Avoid
-- crowded dashboards
-- excessive gradients everywhere
-- five different accent colors
-- tiny text
-- placeholder lorem ipsum
-- generic “Submit” / “Process” / “Run” labels when a more specific label fits
+```css
+:root {
+  --ink-strong: #202520;
+  --ink-soft: #697064;
+  --paper: #f3efe7;
+  --paper-2: #ebe4d8;
+  --paper-3: #dfd7ca;
+  --line: rgba(88, 96, 86, 0.16);
+  --accent: #66745d;
+  --accent-deep: #4c5946;
+  --accent-soft: rgba(102, 116, 93, 0.12);
+  --success-soft: rgba(76, 103, 73, 0.1);
+  --success-line: rgba(76, 103, 73, 0.18);
+  --warning-soft: rgba(165, 129, 73, 0.11);
+  --warning-line: rgba(165, 129, 73, 0.18);
+  --danger-soft: rgba(156, 84, 74, 0.11);
+  --danger-line: rgba(156, 84, 74, 0.18);
+}
+```
 
-### Default UI principle
-A tiny tool should feel like a finished product in one screen.
+The page background should feel softly atmospheric, not flat:
 
----
+- layered radial highlights
+- subtle warm gradient wash
+- no harsh high-contrast wallpaper
 
-## Preact rules
+### Surface treatment
 
-### Prefer
-- function components
-- hooks for local UI state
-- `@preact/signals` for simple shared or frequently updated state
-- small presentational components
-- derived values computed close to usage
+Default surfaces should feel like studio hardware panels:
 
-### Avoid
-- over-abstracting a tiny app
-- global state libraries unless clearly needed
-- giant component trees for small tools
-- creating a router for a one-screen app
+- lightly translucent off-white backgrounds
+- 1px quiet borders
+- restrained shadows
+- corner radius mostly between `0.55rem` and `0.95rem`
+- slightly larger radii for overlays and major cards
 
-### Compatibility
-If a package expects React:
-- first see if it works with the existing Preact Vite preset aliases
-- use `preact/compat` only as needed
-- do not add React and ReactDOM just to satisfy habit
+Use radius intentionally. Do not round everything to the same value without hierarchy.
 
----
+### Dark work surfaces
 
-## Tailwind rules
+For canvases, viewers, or high-focus stages, use a dark technical surface:
 
-Use Tailwind utilities for almost all styling.
+- deep navy-to-charcoal gradient
+- faint grid, plate, or reference geometry when appropriate
+- light text and controls over the dark surface
+- glassy or translucent dark overlays rather than solid black boxes
 
-### Prefer
-- semantic layout grouping in components
-- utility classes directly in JSX
-- a tiny amount of local CSS for:
-  - global background
-  - custom canvas sizing
-  - animation keyframes
-  - complex layered visual effects
+The dark surface should feel anchored and work-oriented, not cinematic.
 
-### Avoid
-- sprawling custom CSS files
-- deep selector chains
-- styling through IDs
-- mixing multiple styling systems
+## Typography
 
----
+### Font system
+
+Use:
+
+- `"Space Grotesk"` for primary UI text and headings
+- `"IBM Plex Mono"` for metadata, chips, code, and compact labels
+
+Fallbacks should stay neutral and modern.
+
+### Type hierarchy
+
+Follow this general pattern:
+
+- page title: bold, compact, slightly tight tracking
+- panel kicker: tiny uppercase label with loose tracking
+- panel title: confident, not oversized
+- body copy: quiet and readable
+- chips and metadata: monospaced, compact
+
+Typography should communicate structure and confidence, not ornament.
+
+## Component patterns
+
+### Panels
+
+Panel design should be consistent:
+
+- use warm studio surfaces
+- keep panel padding tight and practical
+- use kicker plus title for section headers
+- use collapsible panels in secondary rails when the workflow benefits from it
+- panels in the rail should be slightly tighter than the main stage panel
+
+### Buttons
+
+Default button families:
+
+- primary button: olive fill, white text, strong weight
+- secondary button: white or translucent light surface with border
+- viewer/tool button: dark glass or translucent on dark surfaces
+
+Transitions should be subtle:
+
+- small `translateY(-1px)` hover lift
+- quick background and border transitions
+- no springy or playful motion
+
+### Segmented controls and tabs
+
+Use segmented controls frequently for mode switches:
+
+- quiet container shell
+- active segment uses the olive accent fill
+- inactive segments stay light and understated
+- tabs and mode switches should feel like tool toggles, not navigation chrome
+
+### Chips
+
+Use chips for compact metadata:
+
+- monospaced type
+- muted background
+- small radius
+- low-contrast border
+
+They should read as instrumentation, not as tags for decoration.
+
+### Fields
+
+Form controls should be compact and readable:
+
+- off-white or white field surface
+- quiet border
+- medium radius
+- clear focus ring
+- labels above fields
+
+Avoid oversized form rows and tall, mobile-app-like controls unless touch is the primary context.
+
+### Toggles
+
+Prefer toggle cards over raw checkbox rows when the choice affects a workflow mode or important setting.
+
+Toggle cards should:
+
+- have a panel-like background
+- place the control first
+- keep the label and supporting copy visually grouped
+
+### Lists and selectable rows
+
+Selectable rows should be flatter and denser than cards:
+
+- short height
+- light background
+- clear hover state
+- stronger selected state
+- optional thin inset accent strip on selection
+
+If a list item maps to a canvas or viewer object, support a synchronized color swatch when colors are meaningful.
+
+### Popovers
+
+Settings and utility popovers should be:
+
+- anchored to the invoking control
+- compact
+- high enough contrast to float clearly over the workspace
+- dismissible by clicking away
+
+Do not replace this with giant centered modal takeovers unless the task genuinely needs a large editor.
+
+## Viewer and canvas rules
+
+### Viewer chrome
+
+For 3D or canvas-heavy tools:
+
+- make the stage the visual anchor
+- place lightweight utility controls inside the stage edges
+- use a dark footer or glass toolbar for active transform actions
+- keep tool labels direct and functional
+
+### Grounding
+
+The user likes grounded workspaces:
+
+- build plate
+- grid
+- axis cues
+- stable frame of reference
+
+Prefer predictable anchors over clever dynamic framing that makes the scene feel unstable.
+
+### Empty states
+
+Empty states should still look like the product:
+
+- stay inside the real workspace shell
+- keep copy short
+- provide a clear action
+- avoid marketing illustrations or generic onboarding fluff
+
+## Interaction rules
+
+### Selection
+
+Selection must behave like a mature tool:
+
+- selection persists until the user changes or clears it
+- hover never overrides explicit selection
+- click-away deselect should work naturally
+- selection should survive nearby UI changes when possible
+- list selection and canvas selection should stay synchronized
+
+### View state
+
+Protect camera and viewport context:
+
+- no unexpected refits
+- no hidden camera resets
+- no remount-driven state loss
+- fit-to-content should be explicit or very narrowly scoped
+
+This is especially important for graphics work. Stable framing matters more than clever automatic adjustments.
+
+### Tool modes
+
+Switching modes should not:
+
+- wipe selection
+- reset transforms
+- remount the viewer
+- clear viewport state
+
+Tool changes should feel additive and controlled.
+
+### Numeric inputs
+
+Use draft-string editing for numeric fields when live formatting would be intrusive.
+
+Preferred behavior:
+
+- allow temporary states such as empty string, `0`, or `0.`
+- commit validation on blur, Enter, or debounce
+- let select-all and replace work naturally
+
+Avoid aggressive coercion while the user is still typing.
+
+### Keyboard shortcuts
+
+Shortcuts are welcome when they feel like real tool shortcuts.
+
+Rules:
+
+- scope them to the active selection or current mode
+- do not fire while typing in an input
+- do not conflict with normal text editing
+- prefer familiar CAD or editor conventions when they fit
+
+### Persistence
+
+Preferences should stick:
+
+- use local storage or equivalent browser persistence for stable defaults
+- settings changes should apply without resetting unrelated state
+- communicate that settings are saved automatically when useful
+
+## Naming and copy
+
+Use labels that match what the user sees.
+
+Prefer:
+
+- intent-driven names
+- concrete nouns
+- compact copy
+- familiar workspace language
+
+Avoid:
+
+- internal jargon
+- vague CTA labels like "Run" when "Create Projection" or an equivalent task name is available
+- duplicated labels inside already-clear compact rows
+
+## Engineering preferences
+
+### Architecture
+
+Prefer:
+
+- explicit state ownership
+- nearest-common-parent shared state when two surfaces must stay synchronized
+- separation between render-time UI state and export logic
+- pure helpers for math, geometry, and formatting
+
+Avoid:
+
+- multiple competing sources of truth
+- hidden fallback paths that silently override the real runtime path
+- sweeping UI rewrites when a narrow fix will do
+
+### Browser verification
+
+When changing browser-visible UI behavior, verify in a real browser when practical.
+
+Static code review is not enough for:
+
+- selection bugs
+- viewport bugs
+- pointer interactions
+- layout and density changes
+- overlay or popover behavior
+
+### Debugging
+
+For stubborn UI problems:
+
+- identify the actual runtime component
+- add targeted instrumentation
+- prove the render path
+- log before and after important transitions
+- patch narrowly
+- re-test in the browser
+
+## Repo and stack contract
+
+Keep these defaults unless the user asks otherwise:
+
+- package manager/runtime: Bun
+- bundler/dev server: Vite
+- UI framework: Preact
+- styling: Tailwind CSS v4 plus focused local CSS
+- testing: Vitest plus Testing Library
+- graphics: three.js when the feature genuinely needs 3D
+- hosting target: GitHub Pages
+
+This repo is static-hosted:
+
+- no server runtime
+- no backend secrets
+- no SSR assumptions
+- respect `import.meta.env.BASE_URL`
+
+### Browser-first UX
+
+Prefer browser-native workflows whenever they fit:
+
+- drag and drop
+- file input
+- paste
+- pointer interactions
+- keyboard shortcuts
+- local processing over network roundtrips
+
+### Asset and path rules
+
+- use `public/` only for assets that truly need fixed filenames
+- prefer imported assets from `src/` when Vite can fingerprint them
+- never hardcode root-relative paths that break under a GitHub Pages subpath
+- keep GitHub Pages deployment behavior in mind for all asset and router decisions
+
+### PWA
+
+PWA support is optional.
+
+Use it when:
+
+- the tool is a recurring utility
+- offline use materially helps
+- installability improves the experience
+
+Skip it when it adds more complexity than value.
+
+## Styling implementation rules
+
+When building new screens or apps in this house style:
+
+- define shared design tokens in `index.css`
+- keep most layout and one-off styling in component-level classes or utilities
+- use local CSS for global tokens, layered backgrounds, viewer shells, and complex component states
+- avoid sprawling selector chains or mixing many styling systems
 
 ## Performance rules
 
-Always design for small static apps.
+Always keep the app fast and local-first:
 
-### Required habits
-- lazy-load heavy dependencies
-- debounce or throttle expensive live updates where necessary
-- use workers for CPU-heavy processing
-- reuse object URLs and revoke them when done
-- clean up event listeners, timers, animation frames, and WebGL resources
+- lazy-load heavy libraries when practical
+- use workers for CPU-heavy tasks
+- debounce expensive live recomputation
+- clean up timers, listeners, animation frames, and WebGL resources
 
-### Good candidates for workers
-- image transforms
-- SVG/path generation
-- text parsing
-- simulation
-- large numeric loops
-- compression/decompression
-- data import/export transforms
+## Accessibility expectations
 
----
+Even tool-heavy interfaces should meet a practical accessibility bar:
 
-## File and asset rules
-
-### Public assets
-Use `public/` only for assets that must keep a fixed filename, like:
-- favicon
-- PWA icons
-- social preview images
-- static examples that must be addressable directly
-
-### Imported assets
-Prefer importing assets from `src/` when possible so Vite can fingerprint and manage them.
-
-### Paths
-Respect the current Vite base path. This template deploys to GitHub Pages project pages, so repo subpaths matter.
-
----
-
-## PWA rules
-
-PWA support is **optional**, not mandatory.
-
-### Enable PWA when
-- the app is a recurring utility
-- offline use matters
-- mobile installability helps
-- caching improves the user experience
-
-### Skip PWA when
-- the project is a one-off demo
-- the value is mostly visual and short-lived
-- service worker complexity adds little benefit
-
-### If PWA is enabled
-- keep caching simple
-- include meaningful icons
-- include a sensible app name and theme color
-- make update prompts understandable
-- test installability and refresh behavior
-
----
-
-## three.js rules
-
-When using `three`:
-
-- load it dynamically if it is not the only core feature
-- keep scene setup isolated in its own module
-- clean up renderer, textures, geometries, materials, and event listeners
-- resize properly
-- provide a fallback message if WebGL is unavailable
-- keep surrounding UI minimal and readable
-
-Use three.js when the project genuinely benefits from 3D or shader-driven visuals. Do not add it for decorative motion alone.
-
----
-
-## p5.js rules
-
-When using `p5`:
-
-- mount it inside a dedicated component container
-- encapsulate sketch setup and teardown cleanly
-- expose user controls outside the sketch when practical
-- make the sketch responsive
-- avoid hidden global state
-
-Use p5.js for generative art, visual experiments, or interaction-first sketches. Keep the sketch module separate from the broader app shell.
-
----
-
-## Hardware API rules
-
-For Web Serial, WebUSB, WebHID, or Bluetooth:
-
-- assume limited browser support
-- gate all actions behind feature detection
-- explain support requirements clearly
-- do not auto-connect
-- surface permission and connection state visibly
-- handle disconnects gracefully
-- provide a non-hardware demo path if possible
-
-Remember that powerful device APIs may require **secure contexts** and are not universally available.
-
----
-
-## Accessibility rules
-
-Every app should still be usable.
-
-### Minimum bar
-- keyboard reachable controls
+- keyboard-reachable controls
 - visible focus states
-- labels for inputs
-- sufficient color contrast
-- buttons that say what they do
-- reduced-motion consideration for intense animation
-- status text for long-running tasks
+- clear labels
+- usable contrast
+- intentional motion
+- status text for long-running work
 
-Canvas-heavy apps should still expose controls and explanations in accessible HTML outside the canvas.
+Canvas-heavy apps should still expose real HTML controls and status outside the canvas when possible.
 
----
+## Testing and validation
 
-## Suggested project structure
-
-You do not need every folder, but prefer a structure like this:
-
-```text
-src/
-  app.tsx
-  main.tsx
-  index.css
-  components/
-  features/
-  lib/
-  workers/
-  sketches/
-```
-
-### Guidance
-- `components/` for reusable UI pieces
-- `features/` for app-specific functionality
-- `lib/` for helpers, browser utilities, adapters, and constants
-- `workers/` for worker entry points
-- `sketches/` for p5/three/canvas modules
-
-Keep it flat if the app is tiny.
-
----
-
-## Testing rules
-
-Treat validation as required, not optional. Before finishing, run:
+Before finishing substantial work, run:
 
 ```bash
 bun run check
@@ -368,90 +531,58 @@ bun run build
 bun run test:pages-build
 ```
 
-Write tests when the app has meaningful logic.
+Add focused tests for:
 
-Good test targets:
-- conversion logic
-- parser behavior
-- state transitions
-- file transform helpers
-- components with important interactions
+- pure logic
+- geometry and formatting helpers
+- important state transitions
+- interaction regressions that affect selection, sync, or viewport behavior
 
-Do not spend half the project on testing tiny visual wrappers. Focus on logic and critical interactions.
+## Code review checklist for future agents
 
----
+Before finalizing a UI or interaction change, check:
 
-## What to avoid
+1. Did selection remain stable?
+2. Did viewport or camera state remain stable?
+3. Did any component remount and wipe state unexpectedly?
+4. Did settings or tool toggles reset unrelated state?
+5. Does the result still feel like the warm-workbench plus dark-stage house style?
+6. Did the layout keep a dominant main stage and clearly secondary rail?
+7. Was browser-visible behavior verified in a real browser when practical?
 
-Do not introduce the following unless clearly justified:
+If any answer is "maybe," do more verification before claiming success.
 
-- Next.js / SSR frameworks
-- server APIs
-- giant UI libraries
-- auth systems
-- databases
-- CSS-in-JS
-- Redux-like global state for a tiny tool
-- complicated routing for a one-page app
-- unnecessary animation libraries
-- unnecessary package churn
+## Default decision heuristics
 
-This repo exists for **small, elegant, static apps**.
+When the user has not specified a direction, prefer:
 
----
+- stable over clever
+- explicit over implicit
+- tool-like over decorative
+- compact over bloated
+- anchored popovers over giant modals
+- light workbench plus dark focal stage over full-app dark mode
+- visible state over hidden automation
+- focused patches over broad rewrites
 
-## Delivery checklist
+Avoid:
 
-Before finishing, make sure the project has:
-
-- a focused single purpose
-- a polished landing screen
-- responsive layout
-- correct GitHub Pages base path behavior
-- no obvious main-thread blocking for heavy operations
-- clear empty, loading, success, and error states
-- accessible labels and focus states
-- no dead code or unused dependencies
-- updated README with how to run and what the app does
-- `bun run validate` passing locally before handing off
-
----
-
-## README expectations
-
-When you update the README for a new repo, include:
-
-- what the project does
-- how to run it with Bun
-- how to build it
-- whether PWA is enabled
-- any browser support notes
-- any device/hardware support notes
-- any privacy note if files stay local in-browser
-
----
-
-## Implementation preference order
-
-When solving a task, prefer:
-
-1. browser-native APIs
-2. small focused libraries
-3. dynamic imports for heavy libraries
-4. workers for expensive processing
-5. extra dependencies only when they clearly simplify the app
-
----
+- UI surprises
+- aggressive auto-formatting while typing
+- decorative color systems
+- unnecessary dependencies
+- giant empty areas that weaken the workspace feel
 
 ## Final note for agents
 
-Think like you are shipping a tiny product, not scaffolding a demo.
+Think like you are extending a family of desktop-quality browser tools.
 
-The best outcome is:
-- small
-- clear
-- attractive
-- fast
+The desired result is:
+
+- calm
+- capable
+- compact
+- spatial
+- polished
 - local-first
-- easy to host
-- easy for the next agent to extend
+- easy for the next agent to continue without re-inventing the design language

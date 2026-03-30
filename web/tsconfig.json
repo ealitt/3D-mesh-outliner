@@ -14,6 +14,11 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@mesh2cad/mesh-workspace-viewer": ["./packages/mesh-workspace-viewer/src/index.ts"],
+      "@mesh2cad/mesh-workspace-viewer/styles.css": ["./packages/mesh-workspace-viewer/src/styles/base.css"]
+    },
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "types": ["vite/client", "vite-plugin-pwa/preact"]

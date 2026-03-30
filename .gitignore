@@ -1,10 +1,12 @@
 .DS_Store
+.playwright-cli/
 .pytest_cache/
 .venv/
 __pycache__/
 *.pyc
+src/mesh2cad.zip
 
 web/dist/
 web/node_modules/
-web/public/python/manifest.json
-web/public/python/mesh2cad/
+web/public/python/
+web/packages/*/dist/

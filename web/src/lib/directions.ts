@@ -21,9 +21,9 @@ export const VIEW_LABELS: Record<ViewPresetName, string> = {
 };
 
 export const KEEP_MODE_OPTIONS: Array<{ description: string; value: KeepMode }> = [
+  { value: "outer_only", description: "Cast a top-down shadow and keep only the outer outline" },
   { value: "largest", description: "Keep the dominant projected body" },
   { value: "all", description: "Keep every projected body above the area filter" },
-  { value: "outer_only", description: "Union silhouettes and drop interior holes" },
 ];
 
 export const OFFSET_STAGE_OPTIONS: Array<{ description: string; value: OffsetStage }> = [
@@ -38,7 +38,7 @@ export const JOIN_STYLE_OPTIONS: Array<{ description: string; value: JoinStyle }
 ];
 
 export const UNIT_OPTIONS = [
-  { value: null, label: "Use mesh metadata / unknown" },
+  { value: null, label: "Auto / assume millimeters (mm)" },
   { value: "mm", label: "Millimeters (mm)" },
   { value: "cm", label: "Centimeters (cm)" },
   { value: "m", label: "Meters (m)" },

@@ -5,12 +5,19 @@ from shapely.geometry.polygon import orient
 
 from .cleanup import clean_polygons, sort_polygons
 from .config import DEFAULT_EMPTY_BOUNDS, NUMERIC_SNAP_EPSILON
-from .export_dxf import export_dxf
-from .export_svg import export_svg
 from .io_mesh import load_mesh
 from .offsetting import apply_offset, apply_scale
-from .projection import path_to_polygons, project_mesh
-from .types import ExportSpec, MeshInput, PipelineResult, ProcessSpec, ProjectionSpec, RingSet
+from .projection import project_mesh_polygons
+from .transforms import apply_mesh_pose
+from .types import (
+    ExportSpec,
+    LoadedMesh,
+    MeshInput,
+    PipelineResult,
+    ProcessSpec,
+    ProjectionSpec,
+    RingSet,
+)
 from .units import normalize_mesh_units
 
 
@@ -21,10 +28,17 @@ def run_pipeline(
     export: ExportSpec,
     file_type: str | None = None,
 ) -> PipelineResult:
-    warnings: list[str] = []
-
     loaded = load_mesh(mesh_input, file_type=file_type)
-    warnings.extend(loaded.warnings)
+    return run_pipeline_loaded(loaded, projection=projection, process=process, export=export)
+
+
+def run_pipeline_loaded(
+    loaded: LoadedMesh,
+    projection: ProjectionSpec,
+    process: ProcessSpec,
+    export: ExportSpec,
+) -> PipelineResult:
+    warnings: list[str] = list(loaded.warnings)
 
     mesh, effective_units, unit_warnings = normalize_mesh_units(
         loaded.mesh,  # type: ignore[arg-type]
@@ -32,11 +46,10 @@ def run_pipeline(
         output_units=process.output_units,
     )
     warnings.extend(unit_warnings)
+    mesh = apply_mesh_pose(mesh, process.rotation_degrees, process.translation)
 
-    path2d, projection_warnings = project_mesh(mesh, projection)
+    polygons, projection_warnings = project_mesh_polygons(mesh, projection)
     warnings.extend(projection_warnings)
-
-    polygons = path_to_polygons(path2d)
     if not polygons:
         warnings.append("Projection produced no closed 2D regions.")
 
@@ -65,8 +78,17 @@ def run_pipeline(
     area = sum(float(polygon.area) for polygon in processed)
     bounds = polygon_bounds(processed)
 
-    svg_text = export_svg(ringsets, export, units=effective_units) if export.write_svg else None
-    dxf_bytes = export_dxf(ringsets, export, units=effective_units) if export.write_dxf else None
+    svg_text = None
+    if export.write_svg:
+        from .export_svg import export_svg
+
+        svg_text = export_svg(ringsets, export, units=effective_units)
+
+    dxf_bytes = None
+    if export.write_dxf:
+        from .export_dxf import export_dxf
+
+        dxf_bytes = export_dxf(ringsets, export, units=effective_units)
 
     return PipelineResult(
         svg_text=svg_text,
@@ -76,6 +98,7 @@ def run_pipeline(
         warnings=_dedupe_preserve_order(warnings),
         body_count=len(ringsets),
         units=effective_units,
+        rings=ringsets,
     )
 
 

@@ -2,10 +2,15 @@
 
 Static browser frontend for the `mesh2cad` projection pipeline.
 
+Published site: [https://ealitt.github.io/3D-mesh-outliner/](https://ealitt.github.io/3D-mesh-outliner/)
+
 ## What it does
 
-- previews uploaded meshes in a 3D orbit viewer
-- runs the Python projection pipeline inside a Pyodide worker
+- previews uploaded meshes in a Three.js 3D orbit viewer
+- rotates the mesh in X, Y, and Z before processing
+- projects the rotated mesh from top-down
+- defaults to an outer shadow outline workflow with holes removed
+- runs the projection backend in Rust compiled to WebAssembly inside a dedicated worker
 - shows the resulting SVG footprint in-browser
 - exports SVG and DXF
 - supports `stl`, `obj`, `ply`, `glb`, and `3mf` uploads
@@ -13,14 +18,31 @@ Static browser frontend for the `mesh2cad` projection pipeline.
 ## Local development
 
 ```bash
+cd web
 bun install
 bun run dev
 ```
 
-The frontend syncs the current Python package from `../src/mesh2cad/` into `public/python/` before dev/build so the browser worker stays in lockstep with the repo's Python core.
+Open `http://localhost:5173/` after the server starts.
+
+The frontend compiles the Rust crate in `../mesh2cad-wasm/` with `wasm-pack` before dev/build, then the worker loads the generated Wasm module and processes indexed triangle buffers directly.
+
+You need:
+
+- Bun 1.3.x
+- Rust with the `wasm32-unknown-unknown` target
+- `wasm-pack`
+
+Quick setup:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack
+```
 
 ## Scripts
 
+- `bun run build:wasm` — compile the Rust crate to `src/wasm/pkg`
 - `bun run dev` — start the Vite dev server
 - `bun run build` — create a production build
 - `bun run preview` — preview the production build locally
@@ -36,3 +58,9 @@ The root repo workflow at `../.github/workflows/deploy.yml` builds this frontend
 - `VITE_ENABLE_PWA=true`
 
 and deploys `web/dist` to GitHub Pages.
+
+For this repository, the live Pages URL is:
+
+- `https://ealitt.github.io/3D-mesh-outliner/`
+
+Before the workflow can publish, GitHub Pages should be configured to build from `GitHub Actions` in the repository settings.

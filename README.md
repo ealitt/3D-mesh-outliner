@@ -1,6 +1,8 @@
 # mesh2cad
 
-`mesh2cad` is a Python-first utility for turning 3D mesh files into clean 2D projected regions for SVG and DXF workflows.
+`mesh2cad` is a mesh-to-2D outline utility for turning 3D mesh files into clean projected SVG and DXF output.
+
+Live web studio: [https://ealitt.github.io/3D-mesh-outliner/](https://ealitt.github.io/3D-mesh-outliner/)
 
 ## What v1 does
 
@@ -9,6 +11,7 @@
 - Converts the projection into solid 2D polygons with hole support
 - Cleans, filters, scales, and offsets the resulting geometry
 - Exports deterministic SVG and DXF output
+- Defaults to an outer silhouette workflow suitable for foam cutouts, packaging inserts, and shadow outlines
 
 The v1 scope is intentionally narrow: mesh projection to 2D outline/region generation. It is not a full CAD reconstruction tool.
 
@@ -97,8 +100,11 @@ This repo also includes a static browser frontend in [`web/`](./web) based on th
 
 What it does:
 
-- uploads and previews meshes in 3D
-- runs the Python projection pipeline in a Pyodide worker
+- uploads and previews meshes in a Three.js 3D viewer
+- rotates the mesh around X, Y, and Z before processing
+- always projects from top-down after applying that rotation
+- defaults to an outer shadow outline with no interior cutouts
+- runs the projection backend in Rust compiled to WebAssembly inside a dedicated worker
 - previews the generated SVG footprint in-browser
 - downloads SVG and DXF outputs
 - supports `stl`, `obj`, `ply`, `glb`, and `3mf` uploads in the frontend
@@ -111,13 +117,41 @@ bun install
 bun run dev
 ```
 
-The frontend build copies the current Python package from `src/mesh2cad/` into the static site before bundling, so the browser worker always runs the same geometry core as the CLI.
+Then open `http://localhost:5173/`.
+
+Notes:
+
+- `bun run dev` is the right command for local frontend development
+- the web build now compiles `mesh2cad-wasm/` with `wasm-pack` before Vite starts
+- local frontend development requires Rust with the `wasm32-unknown-unknown` target and `wasm-pack`
+- the app now shows a loader/status banner while the mesh preview or Wasm runtime is still warming up
+- uploads can be done by drag-and-drop or by using the file picker
+
+If you do not already have the Wasm toolchain:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack
+```
+
+The frontend parses meshes in JS/Three.js, sends indexed triangle buffers to the worker, and runs the silhouette/offset pipeline inside the Rust/Wasm backend.
 
 GitHub Pages deployment:
 
 - the repo includes [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml)
 - pushes to `main` build the frontend in `web/` and deploy `web/dist` to GitHub Pages
 - the workflow sets `VITE_BASE_PATH` automatically so project-page deploys work under `/<repo-name>/`
+- the published project page is `https://ealitt.github.io/3D-mesh-outliner/`
+- in the GitHub repo settings, Pages should use `GitHub Actions` as the build source
+
+Manual release sanity check:
+
+```bash
+cd web
+bun run validate
+```
+
+That command type-checks the app, runs the Vitest suite, produces the normal production build, and also verifies a GitHub Pages-style build with a repository base path.
 
 ## Library usage
 

@@ -1,6 +1,17 @@
 import { useRegisterSW } from "virtual:pwa-register/preact";
+import type { ReloadPromptCopy } from "../lib/i18n";
 
-export function ReloadPrompt() {
+const DEFAULT_COPY: ReloadPromptCopy = {
+  dismiss: "Dismiss",
+  offlineReadyCopy: "This app is cached and can work offline.",
+  offlineReadyTitle: "App ready offline",
+  reload: "Reload",
+  updateCopy: "A newer version has been cached. Reload when you're ready.",
+  updateTitle: "Update available",
+};
+
+export function ReloadPrompt(props: { copy?: ReloadPromptCopy }) {
+  const copy = props.copy ?? DEFAULT_COPY;
   const {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
@@ -21,12 +32,12 @@ export function ReloadPrompt() {
       <div class="flex flex-col gap-3">
         <div>
           <p class="text-sm font-semibold text-slate-100">
-            {offlineReady ? "App ready offline" : "Update available"}
+            {offlineReady ? copy.offlineReadyTitle : copy.updateTitle}
           </p>
           <p class="mt-1 text-sm text-slate-300">
             {offlineReady
-              ? "This app is cached and can work offline."
-              : "A newer version has been cached. Reload when you're ready."}
+              ? copy.offlineReadyCopy
+              : copy.updateCopy}
           </p>
         </div>
         <div class="flex gap-2">
@@ -35,14 +46,14 @@ export function ReloadPrompt() {
               class="rounded-xl bg-cyan-400 px-3 py-2 text-sm font-medium text-slate-950 transition hover:opacity-90"
               onClick={() => updateServiceWorker(true)}
             >
-              Reload
+              {copy.reload}
             </button>
           ) : null}
           <button
             class="rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-200 transition hover:bg-slate-800"
             onClick={close}
           >
-            Dismiss
+            {copy.dismiss}
           </button>
         </div>
       </div>

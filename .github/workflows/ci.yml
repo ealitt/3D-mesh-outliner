@@ -23,6 +23,26 @@ jobs:
       - name: Run Python tests
         run: pytest
 
+  rust:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mesh2cad-wasm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.14.0
+
+      - name: Run Rust tests
+        run: cargo test
+
   web:
     runs-on: ubuntu-latest
     defaults:
@@ -31,6 +51,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.14.0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2

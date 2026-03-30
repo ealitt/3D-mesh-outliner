@@ -1,4 +1,4 @@
-from .pipeline import run_pipeline, shapely_to_rings
+from .pipeline import run_pipeline, run_pipeline_loaded, shapely_to_rings
 from .types import (
     ExportSpec,
     JoinStyle,
@@ -20,5 +20,6 @@ __all__ = [
     "ProjectionSpec",
     "RingSet",
     "run_pipeline",
+    "run_pipeline_loaded",
     "shapely_to_rings",
 ]

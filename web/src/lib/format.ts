@@ -3,7 +3,7 @@ export function formatNumber(value: number, digits = 3): string {
     return "0";
   }
   const fixed = value.toFixed(digits);
-  return fixed.replace(/\.?0+$/, "");
+  return fixed.includes(".") ? fixed.replace(/\.?0+$/, "") : fixed;
 }
 
 export function formatBounds(bounds: [number, number, number, number]): string {

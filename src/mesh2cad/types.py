@@ -28,10 +28,12 @@ class ProjectionSpec:
 class ProcessSpec:
     source_units: str | None = None
     output_units: str = "mm"
+    rotation_degrees: Point3D = (0.0, 0.0, 0.0)
+    translation: Point3D = (0.0, 0.0, 0.0)
     scale: float = 1.0
     offset_distance: float = 0.0
     offset_stage: OffsetStage = "post_scale"
-    keep_mode: KeepMode = "largest"
+    keep_mode: KeepMode = "outer_only"
     min_area: float = 0.0
     simplify_tolerance: float = 0.0
     join_style: JoinStyle = "round"
@@ -63,6 +65,7 @@ class PipelineResult:
     warnings: list[str]
     body_count: int = 0
     units: str | None = None
+    rings: list[RingSet] | None = None
 
 
 @dataclass(slots=True)
